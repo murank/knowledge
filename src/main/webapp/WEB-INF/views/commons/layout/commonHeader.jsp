@@ -34,6 +34,15 @@
 <meta property="og:site_name" content="Knowledge"/>
 
 <base href="<%= request.getContextPath() %>/" />
+<!--[if lte IE 9]>
+<script>
+// see http://stackoverflow.com/a/13373180
+(function() {
+  var base = document.getElementsByTagName('base')[0];
+  base.href = base.href;
+}())
+</script>
+<![endif]-->
 
 <link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" /> 
 
