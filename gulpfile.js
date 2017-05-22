@@ -28,7 +28,8 @@ gulp.task('copy', ['copy:bootswatch', 'copy:bootswatch2', 'copy:highlightjs', 'c
 
 gulp.task('copy:bootswatch', function() {
     return gulp.src([
-        'src/main/webapp/bower/bootswatch/**/*'
+        'src/main/webapp/bower/bootswatch/**/*',
+        '!src/main/webapp/bower/bootswatch/**/*.css'
     ])
     .pipe(gulp.dest('target/knowledge/bower/bootswatch'));
 });
