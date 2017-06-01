@@ -2,6 +2,7 @@ package org.support.project.knowledge.control.open;
 
 import java.io.FileNotFoundException;
 
+import org.apache.tika.Tika;
 import org.support.project.common.log.Log;
 import org.support.project.common.log.LogFactory;
 import org.support.project.di.DI;
@@ -24,6 +25,8 @@ public class FileControl extends Control {
 
     private UploadedFileLogic fileLogic = UploadedFileLogic.get();
 
+    private Tika tika = new Tika();
+
     @Get
     public Boundary download() {
         LOG.trace("download()");
@@ -37,7 +40,8 @@ public class FileControl extends Control {
             LOG.debug("File binary is null. [fileNo] " + fileNo);
             return sendError(HttpStatus.SC_404_NOT_FOUND, "NOT FOUND");
         }
-        return download(entity.getFileName(), entity.getFileBinary(), entity.getFileSize().longValue());
+        String mimeType = tika.detect(entity.getFileName());
+        return download(entity.getFileName(), entity.getFileBinary(), entity.getFileSize().longValue(), mimeType);
     }
     
     @Get
