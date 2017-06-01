@@ -38,7 +38,13 @@ $(document).ready(function() {
             $.notify('アップロードに失敗しました', 'warn');
         }
     }).prop('disabled', !$.support.fileInput).parent().addClass($.support.fileInput ? undefined : 'disabled');
-    
+
+    $(document).on('show.bs.modal', function() {
+        $('#fileupload').fileupload('disable');
+    }).on('hidden.bs.modal', function() {
+        $('#fileupload').fileupload('enable');
+    });
+
     $('#more_attach').click(function() {
         $('.downloadfile').each(function() {
             $(this).removeClass('hide');

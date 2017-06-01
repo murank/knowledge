@@ -100,6 +100,12 @@ $(document).ready(function() {
         }
      }).prop('disabled', !$.support.fileInput).parent().addClass($.support.fileInput ? undefined : 'disabled');
     
+    $(document).on('show.bs.modal', function() {
+        $('#fileupload').fileupload('disable');
+    }).on('hidden.bs.modal', function() {
+        $('#fileupload').fileupload('enable');
+    });
+
     // Auto complete
     setAutoComplete($("#comment"));
 });
