@@ -6,19 +6,15 @@ $(document).ready(function () {
         var m = moment();
         return 'clip-' + m.format('YYYYMMDDHHmmss') + '.png';
     };
-    var handlePasteImage = function (element) {
-        return function (event) {
-            var imageBlob,formData,url;
-            if (!event.clipboardData
-                || !event.clipboardData.types
-                || (event.clipboardData.types.length != 1)
-                || (event.clipboardData.types[0] != "Files")) {
-                return true;
-            }
-            imageBlob = event.clipboardData.items[0].getAsFile();
+
+    $('#content,#comment').pastableTextarea()
+        .on('pasteImage', function(ev, data) {
+           var imageBlob,formData,url,element;
+            imageBlob = data.blob;
             formData = new FormData();
             formData.append('files[]', imageBlob, createFileName());
             url = _CONTEXT + '/protect.file/upload';
+            element = this;
             jQuery.ajax({
                 type: 'POST',
                 url: url,
@@ -31,19 +27,7 @@ $(document).ready(function () {
                     writeImageLink(msg, target);
                 }
             });
-        }
-    };
-
-    var content = document.querySelector("#content");
-    if(content) {
-        content.addEventListener("paste", handlePasteImage(content));
-    }
-
-    var comment = document.querySelector("#comment");
-    if(comment) {
-        comment.addEventListener("paste", handlePasteImage(comment));
-    }
-
+        });
 });
 
 
