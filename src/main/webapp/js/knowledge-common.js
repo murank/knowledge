@@ -31,13 +31,13 @@ var highlight = function(highlightPromises, jqobj, addstylus) {
  */
 var codeHighlight = function(block) {
     var highlightPromises = [];
-    block.find('pre code').not('.lang-math').each(function(i, block) {
+    block.find('pre code').not('.lang-math,.lang-mermaid').each(function(i, block) {
         highlight(highlightPromises, $(this));
     });
-    block.find('p code').not('.lang-math').each(function(i, block) {
+    block.find('p code').not('.lang-math,.lang-mermaid').each(function(i, block) {
         highlight(highlightPromises, $(this), true);
     });
-    block.find('li code').not('.lang-math').each(function(i, block) {
+    block.find('li code').not('.lang-math,.lang-mermaid').each(function(i, block) {
         highlight(highlightPromises, $(this), true);
     });
     return Promise.all(highlightPromises);
@@ -98,6 +98,36 @@ var decoration = function(jqObj) {
         .then(function() {
             var content = emoji(jqObj.html().trim(), _CONTEXT + '/bower/emoji-parser/emoji', {classes: 'emoji-img'});
             jqObj.html(content);
+            return Promise.resolve();
+        }).then(function () {
+            var elements = jqObj.find('.lang-mermaid')
+                .closest('pre,p,li')
+                .text(function (index, text) {
+                    return text;
+                });
+
+            mermaid.init(undefined, elements);
+
+            elements.css({
+                height: 0,
+                padding: 0,
+                position: 'relative'
+            }).css('padding-top', function () {
+                var $this = $(this);
+                var svg = $this.find('svg');
+                var viewBox = svg.get(0).viewBox.baseVal;
+                var aspectRatio = 100 * viewBox.height / viewBox.width;
+
+                return aspectRatio + '%';
+            }).find('svg')
+                .css({
+                   display: 'block',
+                   position: 'absolute',
+                   height: '100%',
+                   width: '100%',
+                   top: 0,
+                   bottom: 0
+                });
             return Promise.resolve();
         }).then(function () {
             jqObj.find('a.oembed').oembed();

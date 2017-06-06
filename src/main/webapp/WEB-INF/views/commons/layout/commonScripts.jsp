@@ -22,6 +22,9 @@
 <script type="text/javascript" src="bower/marked/lib/marked.js"></script>
 <script type="text/javascript" src="bower/highlightjs/highlight.pack.js"></script>
 
+<script type="text/javascript" src="bower/console-polyfill/index.js"></script>
+<script type="text/javascript" src="bower/mermaid/dist/mermaid.min.js"></script>
+
 <script type="text/javascript" src="bower/bootbox/bootbox.js"></script>
 
 <script type="text/javascript" src="bower/notify.js/notify.js"></script>

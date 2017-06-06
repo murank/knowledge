@@ -61,6 +61,8 @@
 <link rel="stylesheet" href="bower/font-awesome/css/font-awesome.min.css" />
 <link rel="stylesheet" href="bower/flag-icon-css/css/flag-icon.min.css" />
 
+<link rel="stylesheet" href="bower/mermaid/dist/mermaid.css" />
+
 <!-- build:css(src/main/webapp) css/page-common.css -->
 <link rel="stylesheet" href="bower/jquery-oembed-all/jquery.oembed.css" />
 <link rel="stylesheet" href="css/common.css" />

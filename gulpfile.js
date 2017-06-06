@@ -13,7 +13,7 @@ gulp.task('min', function() {
     .pipe(usemin({
         css: [rev],
         htmlmin: [ function () {return minifyHtml({ empty: true });} ],
-        js: [uglify, rev],
+        js: [ function () {return uglify({ output: { quote_keys: true } });}, rev],
         inlinejs: [ uglify ],
         inlinecss: [ minifyCss, 'concat' ],
         outputRelativePath: '../../'
@@ -24,7 +24,7 @@ gulp.task('min', function() {
 
 gulp.task('copy', ['copy:bootswatch', 'copy:bootswatch2', 'copy:highlightjs', 'copy:font-awesome', 'copy:flag-icon-css', 
     'copy:html5shiv', 'copy:respond', 'copy:MathJax', 'copy:emoji-parser', 'copy:free-file-icons',
-    'copy:diff2html', 'copy:jsdiff']);
+    'copy:diff2html', 'copy:jsdiff', 'copy:mermaid']);
 
 gulp.task('copy:bootswatch', function() {
     return gulp.src([
@@ -99,6 +99,12 @@ gulp.task('copy:jsdiff', function() {
         'src/main/webapp/bower/jsdiff/**/*'
     ])
     .pipe(gulp.dest('target/knowledge/bower/jsdiff'));
+});
+gulp.task('copy:mermaid', function() {
+    return gulp.src([
+        'src/main/webapp/bower/mermaid/**/*'
+    ])
+    .pipe(gulp.dest('target/knowledge/bower/mermaid'));
 });
 
 gulp.task('default', ['min', 'copy']);
