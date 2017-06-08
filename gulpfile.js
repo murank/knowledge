@@ -24,7 +24,7 @@ gulp.task('min', function() {
 
 gulp.task('copy', ['copy:bootswatch', 'copy:bootswatch2', 'copy:highlightjs', 'copy:font-awesome', 'copy:flag-icon-css', 
     'copy:html5shiv', 'copy:respond', 'copy:MathJax', 'copy:emoji-parser', 'copy:free-file-icons',
-    'copy:diff2html', 'copy:jsdiff', 'copy:mermaid']);
+    'copy:diff2html', 'copy:jsdiff', 'copy:mermaid', 'copy:pastejs']);
 
 gulp.task('copy:bootswatch', function() {
     return gulp.src([
@@ -105,6 +105,12 @@ gulp.task('copy:mermaid', function() {
         'src/main/webapp/bower/mermaid/**/*'
     ])
     .pipe(gulp.dest('target/knowledge/bower/mermaid'));
+});
+gulp.task('copy:pastejs', function() {
+    return gulp.src([
+        'src/main/webapp/bower/paste.js/**/*'
+    ])
+    .pipe(gulp.dest('target/knowledge/bower/paste.js'));
 });
 
 gulp.task('default', ['min', 'copy']);

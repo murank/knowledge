@@ -37,8 +37,6 @@ MathJax.Hub.Config({
 <script type="text/javascript" src="bower/clockpicker/dist/bootstrap-clockpicker.min.js"></script>
 <script type="text/javascript" src="bower/bootstrap3-typeahead/bootstrap3-typeahead.min.js"></script>
 
-<script type="text/javascript" src="bower/paste.js/paste.js"></script>
-
 <script type="text/javascript" src="js/slide.js"></script>
 <script type="text/javascript" src="js/knowledge-common.js"></script>
 <script type="text/javascript" src="js/knowledge-view.js"></script>
@@ -62,6 +60,9 @@ MathJax.Hub.Config({
 
 <!-- endbuild -->
 
+<!--[if !(lte IE 9)]><!-->
+<script type="text/javascript" src="bower/paste.js/paste.js"></script>
+<!--<![endif]-->
 
 <script>
 var LABEL_LIKE = '<%= jspUtil.label("knowledge.view.like") %>';

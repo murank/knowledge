@@ -7,6 +7,9 @@ $(document).ready(function () {
         return 'clip-' + m.format('YYYYMMDDHHmmss') + '.png';
     };
 
+    if (!$.fn.pastableTextarea) {
+        return;
+    }
     $('#content,#comment').pastableTextarea()
         .on('pasteImage', function(ev, data) {
            var imageBlob,formData,url,element;
