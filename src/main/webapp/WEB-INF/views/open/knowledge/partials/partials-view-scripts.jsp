@@ -64,6 +64,12 @@ MathJax.Hub.Config({
 <script type="text/javascript" src="bower/paste.js/paste.js"></script>
 <!--<![endif]-->
 
+<script type="text/javascript">
+$(function() {
+    $('#content p').has('img').css('page-break-inside', 'avoid');
+});
+</script>
+
 <script>
 var LABEL_LIKE = '<%= jspUtil.label("knowledge.view.like") %>';
 var _LABEL_PARTICIPANTS = '<%= jspUtil.label("knowledge.view.label.participants") %>';

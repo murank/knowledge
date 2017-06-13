@@ -427,3 +427,9 @@
     border-radius: 5px;
 }
 
+@media print {
+    .hljs {
+        border: 1px solid #333 !important;
+    }
+}
+}

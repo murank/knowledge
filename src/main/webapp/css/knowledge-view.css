@@ -172,3 +172,29 @@ Comments
     margin-top: 5px;
     margin-bottom: 5px;
 }
+
+@media print {
+    body {
+        padding: 0;
+    }
+    a[href]:after,
+    abbr[title]:after {
+        content: "";
+    }
+    .meta-info,
+    #content_main ~ *,
+    #footer {
+        display: none;
+    }
+    #content_head > div {
+        display: none;
+    }
+    #content_head > div:first-child {
+        display: block;
+        width: 100%;
+    }
+    .pagetop {
+        visibility: hidden;
+    }
+}
+
