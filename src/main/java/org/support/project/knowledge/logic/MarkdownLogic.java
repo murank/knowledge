@@ -69,7 +69,8 @@ public class MarkdownLogic {
             LOG.error("PegDown parser was deprecated");
         }
         markdownToHtmlOnMarkedJ(markdown, result);
-        return sanitize(markdown, result);
+        return result;
+        //return sanitize(markdown, result);
     }
 
     /**
