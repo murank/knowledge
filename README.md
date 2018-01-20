@@ -5,7 +5,12 @@
 
 ## About
 - Free Knowledge Management System
+- [landing page and Online manual](https://information-knowledge.support-project.org/)
 
+## Support
+- **日本語での質問は、以下のサイトに登録してください(海外からのアクセスが多くなったため)**
+- **For questions in Japanese, please register below**
+- https://service-knowledge.support-project.org/
 
 ## Live Demo
 - [https://test-knowledge.support-project.org](https://test-knowledge.support-project.org)
@@ -23,13 +28,7 @@
 ## How to initial set up
 - Please show the [wiki page](https://github.com/support-project/knowledge/wiki)
 
-
-## Project website (more info)
-- [landing page and Online manual](https://information-knowledge.support-project.org/)
-
-
-
-
-
-
-
+## vulnerability testing
+- vulnerability testing with VAddy
+<a href="https://vaddy.net/" target="_blank">
+<img alt="VAddy logo" src="https://raw.github.com/wiki/support-project/knowledge/assets/images/VAddy_logo_b.png" height="40" /></a>

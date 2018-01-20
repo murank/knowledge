@@ -18,13 +18,14 @@
 }
 </style>
 <!-- build:css(src/main/webapp) css/page-database.css -->
-<link rel="stylesheet" href="bower/bootstrap-fileinput/css/fileinput.min.css" />
+<link rel="stylesheet" href="<%= request.getContextPath() %>/bower/bootstrap-fileinput/css/fileinput.min.css" />
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/adminpage.css" />
 <!-- endbuild -->
 </c:param>
 
 <c:param name="PARAM_SCRIPTS">
 <!-- build:js(src/main/webapp) js/page-database.js -->
-<script type="text/javascript" src="bower/bootstrap-fileinput/js/fileinput.min.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/bower/bootstrap-fileinput/js/fileinput.min.js"></script>
 <!-- endbuild -->
 
 <script>
@@ -35,7 +36,11 @@ $("#input-id").fileinput();
 
 
 <c:param name="PARAM_CONTENT">
-<h4 class="title"><%= jspUtil.label("knowledge.navbar.data.backup") %></h4>
+<h4 class="title"><%= jspUtil.label("knowledge.navbar.data.backup") %>
+<span class="backlink">
+<a href="<%= request.getContextPath() %>/admin.systemconfig/index"><%= jspUtil.label("knowledge.config.system.back.to.list") %></a>
+</span>
+</h4>
 
 <div class="alert alert-warning alert-dismissible" role="alert">
   <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>

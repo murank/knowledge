@@ -231,12 +231,15 @@ $(document).ready(function() {
                 $('#typeName').val(result.typeName ? result.typeName : result.title);
                 $('#typeIcon').val(result.typeIcon);
                 $('#description').val(result.description);
+                $('#initialValue').val(result.initialValue);
                 $('#deletebutton').removeClass('hide');
                 document._TEMPLATE.editable = result.editable;
                 if (!result.editable) {
                     $('#editableMsg').removeClass('hide');
+                    $('#deletebutton').addClass('hide');
                 } else {
                     $('.editbtn').removeClass('hide');
+                    $('#deletebutton').removeClass('hide');
                 }
                 item = result.items.length;
                 result.items.forEach(function(item) {

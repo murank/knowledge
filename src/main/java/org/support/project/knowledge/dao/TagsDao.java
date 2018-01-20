@@ -3,7 +3,9 @@ package org.support.project.knowledge.dao;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.support.project.aop.Aspect;
 import org.support.project.common.util.StringJoinBuilder;
+import org.support.project.common.util.StringUtils;
 import org.support.project.di.Container;
 import org.support.project.di.DI;
 import org.support.project.di.Instance;
@@ -38,6 +40,7 @@ public class TagsDao extends GenTagsDao {
     /**
      * IDを採番 ※コミットしなくても次のIDを採番する為、保存しなければ欠番になる
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public Integer getNextId() {
         String sql = "SELECT MAX(TAG_ID) FROM TAGS;";
         Integer integer = executeQuerySingle(sql, Integer.class);
@@ -54,6 +57,7 @@ public class TagsDao extends GenTagsDao {
      * @param tag
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public TagsEntity selectOnTagName(String tag) {
         String sql = "SELECT * FROM TAGS WHERE TAG_NAME = ?";
         return executeQuerySingle(sql, TagsEntity.class, tag);
@@ -65,6 +69,7 @@ public class TagsDao extends GenTagsDao {
      * @param knowledgeId
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectOnKnowledgeId(Long knowledgeId) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectOnKnowledgeId.sql");
         return executeQueryList(sql, TagsEntity.class, knowledgeId);
@@ -77,6 +82,7 @@ public class TagsDao extends GenTagsDao {
      * @param limit
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectTagsWithCount(int offset, int limit) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectTagsWithCount.sql");
         return executeQueryList(sql, TagsEntity.class, limit, offset);
@@ -91,6 +97,7 @@ public class TagsDao extends GenTagsDao {
      * @return
      * @deprecated
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectTagsWithCountOnUser(int userid, int offset, int limit) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectTagsWithCountOnUser.sql");
         return executeQueryList(sql, TagsEntity.class, userid, limit, offset);
@@ -104,6 +111,7 @@ public class TagsDao extends GenTagsDao {
      * @param loginedUser
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectWithKnowledgeCount(int userId, List<GroupsEntity> groups, int offset, int limit) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectWithKnowledgeCount.sql");
         StringJoinBuilder builder = new StringJoinBuilder();
@@ -130,6 +138,7 @@ public class TagsDao extends GenTagsDao {
      * @param limit
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectWithKnowledgeCountAdmin(int offset, int limit) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectWithKnowledgeCountAdmin.sql");
         return executeQueryList(sql, TagsEntity.class, limit, offset);
@@ -142,11 +151,17 @@ public class TagsDao extends GenTagsDao {
      * @param limit
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<TagsEntity> selectWithKnowledgeCountOnTagName(String keyword, int offset, int limit) {
-        String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectWithKnowledgeCountOnTagName.sql");
-        StringBuilder builder = new StringBuilder();
-        builder.append("%").append(keyword).append("%");
-        return executeQueryList(sql, TagsEntity.class, builder.toString(), limit, offset);
+        if (StringUtils.isEmpty(keyword)) {
+            String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectWithKnowledgeCountByNoCondition.sql");
+            return executeQueryList(sql, TagsEntity.class, limit, offset);
+        } else {
+            String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/TagsDao/TagsDao_selectWithKnowledgeCountByTagName.sql");
+            StringBuilder builder = new StringBuilder();
+            builder.append("%").append(keyword).append("%");
+            return executeQueryList(sql, TagsEntity.class, builder.toString(), limit, offset);
+        }
     }
 
 }

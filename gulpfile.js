@@ -5,11 +5,17 @@ var minifyHtml = require('gulp-minify-html');
 var minifyCss = require('gulp-minify-css');
 var rev = require('gulp-rev');
 var replace = require('gulp-replace');
+var eslint = require('gulp-eslint');
 
 gulp.task('min', function() {
     return gulp.src([
         'src/main/webapp/WEB-INF/views/**/*.jsp'
     ])
+    .pipe(replace('href="<%= request.getContextPath() %>/bower', 'href="/bower'))
+    .pipe(replace('href="<%= request.getContextPath() %>/css', 'href="/css'))
+    .pipe(replace('src="<%= request.getContextPath() %>/bower', 'src="/bower'))
+    .pipe(replace('src="<%= request.getContextPath() %>/js', 'src="/js'))
+    .pipe(replace('<%= request.getContextPath() %>/EasyWizard', '/EasyWizard'))
     .pipe(usemin({
         css: [rev],
         htmlmin: [ function () {return minifyHtml({ empty: true });} ],
@@ -19,12 +25,20 @@ gulp.task('min', function() {
         outputRelativePath: '../../'
     }))
     .pipe(replace('var _LOGGING_NOTIFY_DESKTOP = true;', 'var _LOGGING_NOTIFY_DESKTOP = false;'))
+    .pipe(replace('href="/bower', 'href="<%= request.getContextPath() %>/bower'))
+    .pipe(replace('href="/css', 'href="<%= request.getContextPath() %>/css'))
+    .pipe(replace('src="/bower', 'src="<%= request.getContextPath() %>/bower'))
+    .pipe(replace('src="/js', 'src="<%= request.getContextPath() %>/js'))
+    .pipe(replace('href="bower', 'href="<%= request.getContextPath() %>/bower'))
+    .pipe(replace('href="css', 'href="<%= request.getContextPath() %>/css'))
+    .pipe(replace('src="bower', 'src="<%= request.getContextPath() %>/bower'))
+    .pipe(replace('src="js', 'src="<%= request.getContextPath() %>/js'))
     .pipe(gulp.dest('target/knowledge/WEB-INF/views/'));
 });
 
 gulp.task('copy', ['copy:bootswatch', 'copy:bootswatch2', 'copy:highlightjs', 'copy:font-awesome', 'copy:flag-icon-css', 
     'copy:html5shiv', 'copy:respond', 'copy:MathJax', 'copy:emoji-parser', 'copy:free-file-icons',
-    'copy:diff2html', 'copy:jsdiff', 'copy:mermaid', 'copy:pastejs']);
+    'copy:diff2html', 'copy:jsdiff', 'copy:mermaid', 'copy:pastejs', 'copy:jspdf', 'copy:pdfthema']);
 
 gulp.task('copy:bootswatch', function() {
     return gulp.src([
@@ -111,6 +125,25 @@ gulp.task('copy:pastejs', function() {
         'src/main/webapp/bower/paste.js/**/*'
     ])
     .pipe(gulp.dest('target/knowledge/bower/paste.js'));
+});
+gulp.task('copy:jspdf', function() {
+    return gulp.src([
+        'src/main/webapp/bower/jspdf/**/*'
+    ])
+    .pipe(gulp.dest('target/knowledge/bower/jspdf'));
+});
+gulp.task('copy:pdfthema', function() {
+    return gulp.src([
+        'src/main/webapp/css/presentation-thema/**/*'
+    ])
+    .pipe(gulp.dest('target/knowledge/css/presentation-thema'));
+});
+
+gulp.task('check', function () {
+    return gulp.src(['src/main/webapp/js/slide.js'])
+    .pipe(eslint())
+    .pipe(eslint.format())
+    .pipe(eslint.failAfterError());
 });
 
 gulp.task('default', ['min', 'copy']);

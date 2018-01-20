@@ -2,6 +2,7 @@ package org.support.project.knowledge.dao;
 
 import java.util.List;
 
+import org.support.project.aop.Aspect;
 import org.support.project.di.Container;
 import org.support.project.knowledge.vo.AccountInfo;
 import org.support.project.knowledge.vo.GroupUser;
@@ -35,6 +36,7 @@ public class ExUsersDao extends UsersDao {
      * @param limit
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<GroupUser> selectGroupUser(Integer groupId, int offset, int limit) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/ExUsersDao/selectGroupUser.sql");
         return executeQueryList(sql, GroupUser.class, groupId, limit, offset);
@@ -45,6 +47,7 @@ public class ExUsersDao extends UsersDao {
      * 
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public List<UsersEntity> selectNotifyPublicUsers() {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/ExUsersDao/selectNotifyPublicUsers.sql");
         return executeQueryList(sql, UsersEntity.class);
@@ -58,10 +61,13 @@ public class ExUsersDao extends UsersDao {
      * @param userId
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public AccountInfo selectAccountInfoOnKey(Integer userId) {
         String sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/ExUsersDao/selectAccountInfoOnKey.sql");
         AccountInfo info = executeQuerySingle(sql, AccountInfo.class, userId);
-
+        if (info == null) {
+            return null;
+        }
         sql = SQLManager.getInstance().getSql("/org/support/project/knowledge/dao/sql/ExUsersDao/selectLikeCountOnAccount.sql");
         Integer likeCount = executeQuerySingle(sql, Integer.class, userId);
         info.setLikeCount(likeCount);
@@ -71,6 +77,21 @@ public class ExUsersDao extends UsersDao {
         info.setStockCount(stockCount);
 
         return info;
+    }
+    
+    /**
+     * ユーザ名でユーザの情報を取得
+     * 同姓同名も存在しうるため、リストで返す
+     * @param userName
+     * @return
+     */
+    public List<UsersEntity> selectByUserName(String userName) {
+        String sql = "SELECT * FROM USERS WHERE USER_NAME = ?";
+        List<UsersEntity> users = executeQueryList(sql, UsersEntity.class, userName);
+        for (UsersEntity usersEntity : users) {
+            usersEntity.setPassword(""); // パスワードはクリア
+        }
+        return users;
     }
 
 }

@@ -3,7 +3,6 @@ package org.support.project.knowledge.logic;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,21 +15,26 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.support.project.common.config.Flag;
 import org.support.project.common.log.Log;
 import org.support.project.common.log.LogFactory;
+import org.support.project.common.util.StringUtils;
 import org.support.project.di.Container;
 import org.support.project.di.DI;
 import org.support.project.di.Instance;
-import org.support.project.knowledge.dao.TagsDao;
-import org.support.project.knowledge.entity.CommentsEntity;
-import org.support.project.knowledge.entity.KnowledgesEntity;
-import org.support.project.knowledge.entity.TagsEntity;
+import org.support.project.knowledge.config.AppConfig;
+import org.support.project.knowledge.dao.WebhookConfigsDao;
+import org.support.project.knowledge.dao.WebhooksDao;
 import org.support.project.knowledge.entity.WebhookConfigsEntity;
-import org.support.project.knowledge.vo.Notify;
-import org.support.project.web.bean.LabelValue;
-import org.support.project.web.dao.UsersDao;
+import org.support.project.knowledge.entity.WebhooksEntity;
+import org.support.project.knowledge.logic.notification.webhook.AbstractWebHookNotification;
+import org.support.project.knowledge.logic.notification.webhook.CommentInsertWebhookNotification;
+import org.support.project.knowledge.logic.notification.webhook.CommentLikedWebhookNotification;
+import org.support.project.knowledge.logic.notification.webhook.EmptyWebHookNotification;
+import org.support.project.knowledge.logic.notification.webhook.KnowledgeLikedWebHookNotification;
+import org.support.project.knowledge.logic.notification.webhook.KnowledgeUpdateWebHookNotification;
+import org.support.project.web.dao.ProxyConfigsDao;
 import org.support.project.web.entity.ProxyConfigsEntity;
-import org.support.project.web.entity.UsersEntity;
 
 @DI(instance = Instance.Singleton)
 public class WebhookLogic extends HttpLogic {
@@ -40,145 +44,134 @@ public class WebhookLogic extends HttpLogic {
     public static WebhookLogic get() {
         return Container.getComp(WebhookLogic.class);
     }
+    
+    /** webhookの状態：未送信（送信待ち） */
+    public static final int WEBHOOK_STATUS_UNSENT = 0;
+    /** webhookの状態：なんらかの通信エラーが発生した */
+    public static final int WEBHOOK_STATUS_ERROR = -1;
+    
 
     /**
-     * 記事のjsonデータを取得する
-     *
-     * @param knowledge
-     * @param type
+     * Webhookの実行
+     */
+    public void startNotifyWebhook() {
+        Map<String, List<WebhookConfigsEntity>> configs = getMappedConfigs();
+        if (0 == configs.size()) {
+            // webhookの設定が登録されていなければ、送信処理は終了
+            return;
+        }
+
+        ProxyConfigsDao proxyConfigDao = ProxyConfigsDao.get();
+        ProxyConfigsEntity proxyConfig = proxyConfigDao.selectOnKey(AppConfig.get().getSystemName());
+
+        WebhooksDao dao = WebhooksDao.get();
+        List<WebhooksEntity> entities = dao.selectOnStatus(WEBHOOK_STATUS_UNSENT);
+        int count = 0;
+        for (WebhooksEntity entity : entities) {
+            try {
+                List<WebhookConfigsEntity> configEntities = configs.get(entity.getHook());
+                for (WebhookConfigsEntity configEntity : configEntities) {
+                    String json = "";
+                    try {
+                        json = createJson(entity, configEntity);
+                    } catch (Exception e) {
+                        LOG.warn("Failed to generate JSON to send webhook. [webhook config]" + configEntity.getHookId() + "[gen data]" + entity.getContent());
+                    }
+                    if (StringUtils.isEmpty(json)) {
+                        LOG.warn("Failed to generate JSON to send webhook. [webhook config]" + configEntity.getHookId() + "[gen data]" + entity.getContent());
+                    } else {
+                        notify(proxyConfig, configEntity, json);
+                    }
+                }
+                dao.physicalDelete(entity);
+                count++;
+            } catch (Exception e) {
+                LOG.warn("Failed to send webhook. [webhook id]" + entity.getWebhookId(), e);
+                entity.setStatus(WEBHOOK_STATUS_ERROR);
+                dao.save(entity);
+            }
+        }
+        LOG.info("Webhook sended. count: " + count);
+    }
+    
+    /**
+     * WebHook通知クラスを取得
+     * @param configEntity
      * @return
      */
-    public Map<String, Object> getKnowledgeData(KnowledgesEntity knowledge, Integer type) {
-    	Map<String, Object> jsonObject = new HashMap<String, Object>();
-
-    	/**  This code make JSON to send Slack */
-        String linktop = "<";
-        String linkpipe = "|";
-        String linkend = ">";
-        
-        /**  This code make JSON to send Slack */
-        StringBuffer SendBuff = new StringBuffer();
-        SendBuff.append(linktop);
-        SendBuff.append(NotifyLogic.get().makeURL(knowledge.getKnowledgeId()));
-        SendBuff.append(linkpipe);
-        SendBuff.append(knowledge.getTitle());
-        SendBuff.append(linkend);
-        String SendString = SendBuff.toString();
-        jsonObject.put("text", SendString);
-        
-        jsonObject.put("knowledge_id", knowledge.getKnowledgeId());
-        jsonObject.put("title", knowledge.getTitle());
-        jsonObject.put("content", knowledge.getContent());
-        jsonObject.put("public_flag", knowledge.getPublicFlag());
-        jsonObject.put("like_count", knowledge.getLikeCount());
-        jsonObject.put("comment_count", knowledge.getCommentCount());
-        jsonObject.put("type_id", knowledge.getTypeId());
-        jsonObject.put("link", NotifyLogic.get().makeURL(knowledge.getKnowledgeId()));
-        
-        boolean became_public = false;
-        if (knowledge.getNotifyStatus() == null || knowledge.getNotifyStatus().intValue() == 0) {
-            if (knowledge.getPublicFlag().intValue() != KnowledgeLogic.PUBLIC_FLAG_PRIVATE) {
-                // 今まで非公開だったものが、初めての通知になった
-                became_public = true;
-            }
+    public AbstractWebHookNotification getWebHookNotification(WebhookConfigsEntity configEntity) {
+        if (configEntity.getHook().equals(WebhookConfigsEntity.HOOK_KNOWLEDGES)) {
+            return KnowledgeUpdateWebHookNotification.get();
+        } else if (configEntity.getHook().equals(WebhookConfigsEntity.HOOK_COMMENTS)) {
+            return CommentInsertWebhookNotification.get();
+        } else if (configEntity.getHook().equals(WebhookConfigsEntity.HOOK_LIKED_KNOWLEDGE)) {
+            return KnowledgeLikedWebHookNotification.get();
+        } else if (configEntity.getHook().equals(WebhookConfigsEntity.HOOK_LIKED_COMMENT)) {
+            return CommentLikedWebhookNotification.get();
         }
-        jsonObject.put("became_public", became_public);
-
-        if (type != null) {
-            if (Notify.TYPE_KNOWLEDGE_INSERT == type) {
-                jsonObject.put("status", "created");
-            } else {
-                jsonObject.put("status", "updated");
-            }
-        }
-
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-
-        UsersEntity insertUser = UsersDao.get().selectOnKey(knowledge.getInsertUser());
-        if (insertUser != null) {
-            jsonObject.put("insert_user", insertUser.getUserName());
-        } else {
-            jsonObject.put("insert_user", "Unknown user");
-        }
-        jsonObject.put("insert_date", simpleDateFormat.format(knowledge.getInsertDatetime()));
-
-        UsersEntity updateUser = UsersDao.get().selectOnKey(knowledge.getInsertUser());
-        if (updateUser != null) {
-            jsonObject.put("update_user", updateUser.getUserName());
-        } else {
-            jsonObject.put("insert_user", "Unknown user");
-        }
-        jsonObject.put("update_date", simpleDateFormat.format(knowledge.getUpdateDatetime()));
-
-        List<TagsEntity> tagsEntities = TagsDao.get().selectOnKnowledgeId(knowledge.getKnowledgeId());
-        List<String> tags = new ArrayList<String>();
-        for (TagsEntity tag : tagsEntities) {
-            tags.add(tag.getTagName());
-        }
-        jsonObject.put("tags", tags);
-
-        List<LabelValue> labelGroups = TargetLogic.get().selectTargetsOnKnowledgeId(knowledge.getKnowledgeId());
-        List<String> groups = new ArrayList<String>();
-        for (LabelValue label : labelGroups) {
-            if (label.getValue().startsWith("G")) {
-                groups.add(label.getLabel());
-            }
-        }
-        jsonObject.put("groups", groups);
-
-        return jsonObject;
+        return new EmptyWebHookNotification();
+    }
+    /**
+     * JSON生成のテンプレートを読み出す
+     * @param configEntity
+     * @return
+     * @throws Exception 
+     */
+    public String loadTemplate(WebhookConfigsEntity configEntity) throws Exception {
+        return getWebHookNotification(configEntity).loadTemplate(configEntity);
+    }
+    
+    /**
+     * 送信するJSONを生成する
+     * @param entity
+     * @param configEntity
+     * @return
+     */
+    public String createJson(WebhooksEntity entity, WebhookConfigsEntity configEntity) throws Exception {
+        return getWebHookNotification(configEntity).createSendJson(entity, configEntity);
     }
 
     /**
-     * コメントのjsonデータを取得する
-     *
-     * @param comment
-     * @param knowledge
+     * 設定を返す
      * @return
      */
-    public Map<String, Object> getCommentData(CommentsEntity comment, KnowledgesEntity knowledge) {
-        Map<String, Object> jsonObject = new HashMap<String, Object>();
+    private Map<String, List<WebhookConfigsEntity>> getMappedConfigs() {
+        Map<String, List<WebhookConfigsEntity>> hooks = new HashMap<String, List<WebhookConfigsEntity>>();
 
-        /**  This code make JSON to send Slack */
-        String linktop = "<";
-        String linkpipe = "|";
-        String linkend = ">";
-        
-        /**  This code make JSON to send Slack */
-        StringBuffer SendBuff = new StringBuffer();
-        SendBuff.append(linktop);
-        SendBuff.append(NotifyLogic.get().makeURL(knowledge.getKnowledgeId()));
-        SendBuff.append(linkpipe);
-        SendBuff.append(knowledge.getTitle());
-        SendBuff.append(linkend);
-        String SendString = SendBuff.toString();
-        jsonObject.put("text", SendString);
-        
-        jsonObject.put("comment_no", comment.getCommentNo());
-        jsonObject.put("comment", comment.getComment());
+        WebhookConfigsDao webhookConfigsDao = WebhookConfigsDao.get();
+        List<WebhookConfigsEntity> entities = webhookConfigsDao.selectAll();
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-
-        UsersEntity insertUser = UsersDao.get().selectOnKey(comment.getInsertUser());
-        if (insertUser != null) {
-            jsonObject.put("insert_user", insertUser.getUserName());
-        } else {
-            jsonObject.put("insert_user", "Unknown user");
+        if (0 == entities.size()) {
+            return hooks;
         }
-        jsonObject.put("insert_date", simpleDateFormat.format(comment.getInsertDatetime()));
+        
+        // TODO 後でリファクタリング（WebHookの種類を追加する毎に、ロジックを修正しなくてはいけなくて面倒）
+        List<WebhookConfigsEntity> knowledgeHooks = new ArrayList<WebhookConfigsEntity>();
+        List<WebhookConfigsEntity> commentHooks = new ArrayList<WebhookConfigsEntity>();
+        List<WebhookConfigsEntity> likedHooks = new ArrayList<WebhookConfigsEntity>();
+        List<WebhookConfigsEntity> likedCommentHooks = new ArrayList<WebhookConfigsEntity>();
 
-        UsersEntity updateUser = UsersDao.get().selectOnKey(comment.getInsertUser());
-        if (updateUser != null) {
-            jsonObject.put("update_user", updateUser.getUserName());
-        } else {
-            jsonObject.put("insert_user", "Unknown user");
+        for (WebhookConfigsEntity entity : entities) {
+            if (WebhookConfigsEntity.HOOK_KNOWLEDGES.equals(entity.getHook())) {
+                knowledgeHooks.add(entity);
+            } else if (WebhookConfigsEntity.HOOK_COMMENTS.equals(entity.getHook())) {
+                commentHooks.add(entity);
+            } else if (WebhookConfigsEntity.HOOK_LIKED_KNOWLEDGE.equals(entity.getHook())) {
+                likedHooks.add(entity);
+            } else if (WebhookConfigsEntity.HOOK_LIKED_COMMENT.equals(entity.getHook())) {
+                likedCommentHooks.add(entity);
+            }
         }
-        jsonObject.put("update_date", simpleDateFormat.format(knowledge.getUpdateDatetime()));
 
-        jsonObject.put("knowledge", getKnowledgeData(knowledge, null));
-        return jsonObject;
+        hooks.put(WebhookConfigsEntity.HOOK_KNOWLEDGES, knowledgeHooks);
+        hooks.put(WebhookConfigsEntity.HOOK_COMMENTS, commentHooks);
+        hooks.put(WebhookConfigsEntity.HOOK_LIKED_KNOWLEDGE, likedHooks);
+        hooks.put(WebhookConfigsEntity.HOOK_LIKED_COMMENT, likedCommentHooks);
+
+        return hooks;
     }
-
+    
+    
     /**
      * 通知を送る
      *
@@ -191,7 +184,11 @@ public class WebhookLogic extends HttpLogic {
         URI uri = new URI(webhookConfig.getUrl());
 
         // HttpClient生成
-        this.httpclient = createHttpClient(proxyConfig);
+        if (Flag.is(webhookConfig.getIgnoreProxy())) {
+            this.httpclient = createHttpClient(null); // IgnoreProxy が ON の場合、Proxy設定を使わない
+        } else {
+            this.httpclient = createHttpClient(proxyConfig);
+        }
         HttpPost httpPost = new HttpPost(uri);
         httpPost.addHeader("Content-type", "application/json");
         httpPost.setEntity(new StringEntity(json, StandardCharsets.UTF_8));

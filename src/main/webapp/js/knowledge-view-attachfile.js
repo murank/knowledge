@@ -5,6 +5,7 @@ $(document).ready(function() {
         dataType : 'json',
         autoUpload: true,
         maxFileSize: 5000000, // 5 MB
+        dropZone: '#drop_target',
     }).on('fileuploaddone', function (e, data) {
         uploadedFiles(data.result.files);
         setTimeout(function() {
@@ -54,7 +55,6 @@ $(document).ready(function() {
     
 });
 
-
 var uploadedFiles = function(files) {
     console.log(files);
     $.each(files, function(index, file) {
@@ -66,7 +66,7 @@ var uploadedFiles = function(files) {
         filediv += '</div>';
         
         filediv += '<div class="file-label col-xs-6">';
-        filediv += '<a href="' + file.url + '">';
+        filediv += '<a href="' + file.url + '&amp;attachment=true">';
         var filename = file.name;
         if (filename.length > 20) {
             filename = filename.substring(0, 17) + '...';

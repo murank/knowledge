@@ -1,3 +1,185 @@
+-- いいねの通知状態
+drop table if exists NOTIFICATION_STATUS cascade;
+
+create table NOTIFICATION_STATUS (
+  TYPE integer not null
+  , TARGET_ID bigint not null
+  , USER_ID integer not null
+  , STATUS integer
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint NOTIFICATION_STATUS_PKC primary key (TYPE,TARGET_ID,USER_ID)
+) ;
+
+-- メールから投稿の際の除外条件
+drop table if exists MAIL_HOOK_IGNORE_CONDITIONS cascade;
+
+create table MAIL_HOOK_IGNORE_CONDITIONS (
+  HOOK_ID INTEGER not null
+  , CONDITION_NO integer not null
+  , IGNORE_CONDITION_NO integer not null
+  , CONDITION_KIND integer not null
+  , CONDITION character varying(256)
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint MAIL_HOOK_IGNORE_CONDITIONS_PKC primary key (HOOK_ID,CONDITION_NO,IGNORE_CONDITION_NO)
+) ;
+
+-- ユーザのポイント獲得履歴
+drop table if exists POINT_USER_HISTORIES cascade;
+
+create table POINT_USER_HISTORIES (
+  USER_ID INTEGER not null
+  , HISTORY_NO BIGINT not null
+  , ACTIVITY_NO BIGINT not null
+  , TYPE integer not null
+  , POINT integer not null
+  , BEFORE_TOTAL integer not null
+  , TOTAL integer not null
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint POINT_USER_HISTORIES_PKC primary key (USER_ID,HISTORY_NO)
+) ;
+
+create index IDX_POINT_USER_HISTORIES_INSERT_DATETIME
+  on POINT_USER_HISTORIES(INSERT_DATETIME);
+
+-- ナレッジのポイント獲得履歴
+drop table if exists POINT_KNOWLEDGE_HISTORIES cascade;
+
+create table POINT_KNOWLEDGE_HISTORIES (
+  KNOWLEDGE_ID BIGINT not null
+  , HISTORY_NO BIGINT not null
+  , ACTIVITY_NO BIGINT not null
+  , TYPE integer not null
+  , POINT integer not null
+  , BEFORE_TOTAL integer not null
+  , TOTAL integer not null
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint POINT_KNOWLEDGE_HISTORIES_PKC primary key (KNOWLEDGE_ID,HISTORY_NO)
+) ;
+
+create index IDX_POINT_KNOWLEDGE_HISTORIES_INSERT_DATETIME
+  on POINT_KNOWLEDGE_HISTORIES(INSERT_DATETIME);
+
+-- ユーザの称号
+drop table if exists USER_BADGES cascade;
+
+create table USER_BADGES (
+  USER_ID INTEGER not null
+  , NO INTEGER not null
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint USER_BADGES_PKC primary key (USER_ID,NO)
+) ;
+
+-- アクティビティ
+drop table if exists ACTIVITIES cascade;
+
+create table ACTIVITIES (
+  ACTIVITY_NO BIGSERIAL not null
+  , USER_ID INTEGER not null
+  , KIND integer not null
+  , TARGET character varying(64) not null
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint ACTIVITIES_PKC primary key (ACTIVITY_NO)
+) ;
+
+create index IDX_ACTIVITIES_USER_ID
+  on ACTIVITIES(USER_ID);
+
+create index IDX_ACTIVITIES_KIND_TARGET
+  on ACTIVITIES(KIND,TARGET);
+
+-- 称号
+drop table if exists BADGES cascade;
+
+create table BADGES (
+  NO SERIAL not null
+  , NAME character varying(128) not null
+  , DISPLAY_TEXT character varying(32) not null
+  , DESCRIPTION text
+  , IMAGE character varying(64)
+  , POINT integer
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint BADGES_PKC primary key (NO)
+) ;
+
+-- コメントのイイネ
+drop table if exists LIKE_COMMENTS cascade;
+
+create table LIKE_COMMENTS (
+  NO BIGSERIAL not null
+  , COMMENT_NO bigint not null
+  , LIKE_CLASS integer default 1
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint LIKE_COMMENTS_PKC primary key (NO)
+) ;
+
+create index IDX_LIKE_COMMENTS_COMMENT_NO
+  on LIKE_COMMENTS(COMMENT_NO);
+
+-- 認証トークン
+drop table if exists TOKENS cascade;
+
+create table TOKENS (
+  TOKEN character varying(128) not null
+  , USER_ID integer not null
+  , EXPIRES timestamp not null
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint TOKENS_PKC primary key (TOKEN)
+) ;
+
+create unique index TOKENS_IX1
+  on TOKENS(USER_ID);
+
+-- メール受信設定
+drop table if exists MAIL_PROPERTIES cascade;
+
+create table MAIL_PROPERTIES (
+  HOOK_ID INTEGER not null
+  , PROPERTY_KEY character varying(128) not null
+  , PROPERTY_VALUE character varying(256)
+  , INSERT_USER integer
+  , INSERT_DATETIME timestamp
+  , UPDATE_USER integer
+  , UPDATE_DATETIME timestamp
+  , DELETE_FLAG integer
+  , constraint MAIL_PROPERTIES_PKC primary key (HOOK_ID,PROPERTY_KEY)
+) ;
+
 -- ロケール毎のメールテンプレート
 drop table if exists MAIL_LOCALE_TEMPLATES cascade;
 
@@ -214,6 +396,8 @@ create table WEBHOOK_CONFIGS (
   HOOK_ID serial not null
   , HOOK character varying(20) not null
   , URL character varying(256) not null
+  , IGNORE_PROXY integer
+  , TEMPLATE text
   , INSERT_USER integer
   , INSERT_DATETIME timestamp
   , UPDATE_USER integer
@@ -378,6 +562,7 @@ create table TEMPLATE_MASTERS (
   , TYPE_NAME character varying(256) not null
   , TYPE_ICON character varying(64)
   , DESCRIPTION character varying(1024)
+  , INITIAL_VALUE text
   , INSERT_USER integer
   , INSERT_DATETIME timestamp
   , UPDATE_USER integer
@@ -395,6 +580,7 @@ create table TEMPLATE_ITEMS (
   , ITEM_NAME character varying(32) not null
   , ITEM_TYPE integer not null
   , DESCRIPTION character varying(1024)
+  , INITIAL_VALUE text
   , INSERT_USER integer
   , INSERT_DATETIME timestamp
   , UPDATE_USER integer
@@ -518,6 +704,7 @@ drop table if exists LIKES cascade;
 create table LIKES (
   NO BIGSERIAL not null
   , KNOWLEDGE_ID bigint not null
+  , LIKE_CLASS integer default 1
   , INSERT_USER integer
   , INSERT_DATETIME timestamp
   , UPDATE_USER integer
@@ -583,6 +770,12 @@ create table VIEW_HISTORIES (
 
 create index IDX_VIEW_HISTORIES_KNOWLEDGE_ID
   on VIEW_HISTORIES(KNOWLEDGE_ID);
+
+create index IDX_VIEW_HISTORIES_INSERT_USER
+  on VIEW_HISTORIES(INSERT_USER);
+
+create index IDX_VIEW_HISTORIES_KNOWLEDGE_ID_INSERT_USER
+  on VIEW_HISTORIES(KNOWLEDGE_ID,INSERT_USER);
 
 -- ストックしたナレッジ
 drop table if exists STOCK_KNOWLEDGES cascade;
@@ -690,8 +883,10 @@ create table KNOWLEDGES (
   , TAG_NAMES text
   , LIKE_COUNT bigint
   , COMMENT_COUNT integer
+  , VIEW_COUNT bigint
   , TYPE_ID integer
   , NOTIFY_STATUS integer
+  , POINT integer default 0 not null
   , INSERT_USER integer
   , INSERT_DATETIME timestamp
   , UPDATE_USER integer
@@ -699,6 +894,120 @@ create table KNOWLEDGES (
   , DELETE_FLAG integer
   , constraint KNOWLEDGES_PKC primary key (KNOWLEDGE_ID)
 ) ;
+
+comment on table NOTIFICATION_STATUS is 'いいねの通知状態';
+comment on column NOTIFICATION_STATUS.TYPE is '種類';
+comment on column NOTIFICATION_STATUS.TARGET_ID is 'ターゲットのID';
+comment on column NOTIFICATION_STATUS.USER_ID is '登録者';
+comment on column NOTIFICATION_STATUS.STATUS is '通知の状態';
+comment on column NOTIFICATION_STATUS.INSERT_USER is '登録ユーザ';
+comment on column NOTIFICATION_STATUS.INSERT_DATETIME is '登録日時';
+comment on column NOTIFICATION_STATUS.UPDATE_USER is '更新ユーザ';
+comment on column NOTIFICATION_STATUS.UPDATE_DATETIME is '更新日時';
+comment on column NOTIFICATION_STATUS.DELETE_FLAG is '削除フラグ';
+
+comment on table MAIL_HOOK_IGNORE_CONDITIONS is 'メールから投稿の際の除外条件';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.HOOK_ID is 'HOOK_ID';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.CONDITION_NO is 'CONDITION_NO';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.IGNORE_CONDITION_NO is 'IGNORE_CONDITION_NO';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.CONDITION_KIND is '条件の種類	 1:宛先が「条件文字」であった場合';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.CONDITION is '条件の文字';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.INSERT_USER is '登録ユーザ';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.INSERT_DATETIME is '登録日時';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.UPDATE_USER is '更新ユーザ';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.UPDATE_DATETIME is '更新日時';
+comment on column MAIL_HOOK_IGNORE_CONDITIONS.DELETE_FLAG is '削除フラグ';
+
+comment on table POINT_USER_HISTORIES is 'ユーザのポイント獲得履歴';
+comment on column POINT_USER_HISTORIES.USER_ID is 'ユーザID';
+comment on column POINT_USER_HISTORIES.HISTORY_NO is '履歴番号';
+comment on column POINT_USER_HISTORIES.ACTIVITY_NO is 'アクティビティ番号';
+comment on column POINT_USER_HISTORIES.TYPE is '獲得のタイプ';
+comment on column POINT_USER_HISTORIES.POINT is '獲得ポイント';
+comment on column POINT_USER_HISTORIES.BEFORE_TOTAL is '獲得前ポイント';
+comment on column POINT_USER_HISTORIES.TOTAL is 'トータルポイント';
+comment on column POINT_USER_HISTORIES.INSERT_USER is '登録ユーザ';
+comment on column POINT_USER_HISTORIES.INSERT_DATETIME is '登録日時';
+comment on column POINT_USER_HISTORIES.UPDATE_USER is '更新ユーザ';
+comment on column POINT_USER_HISTORIES.UPDATE_DATETIME is '更新日時';
+comment on column POINT_USER_HISTORIES.DELETE_FLAG is '削除フラグ';
+
+comment on table POINT_KNOWLEDGE_HISTORIES is 'ナレッジのポイント獲得履歴';
+comment on column POINT_KNOWLEDGE_HISTORIES.KNOWLEDGE_ID is 'ナレッジID';
+comment on column POINT_KNOWLEDGE_HISTORIES.HISTORY_NO is '履歴番号';
+comment on column POINT_KNOWLEDGE_HISTORIES.ACTIVITY_NO is 'アクティビティ番号';
+comment on column POINT_KNOWLEDGE_HISTORIES.TYPE is '獲得のタイプ';
+comment on column POINT_KNOWLEDGE_HISTORIES.POINT is '獲得ポイント';
+comment on column POINT_KNOWLEDGE_HISTORIES.BEFORE_TOTAL is '獲得前ポイント';
+comment on column POINT_KNOWLEDGE_HISTORIES.TOTAL is 'トータルポイント';
+comment on column POINT_KNOWLEDGE_HISTORIES.INSERT_USER is '登録ユーザ';
+comment on column POINT_KNOWLEDGE_HISTORIES.INSERT_DATETIME is '登録日時';
+comment on column POINT_KNOWLEDGE_HISTORIES.UPDATE_USER is '更新ユーザ';
+comment on column POINT_KNOWLEDGE_HISTORIES.UPDATE_DATETIME is '更新日時';
+comment on column POINT_KNOWLEDGE_HISTORIES.DELETE_FLAG is '削除フラグ';
+
+comment on table USER_BADGES is 'ユーザの称号';
+comment on column USER_BADGES.USER_ID is 'ユーザID';
+comment on column USER_BADGES.NO is '番号';
+comment on column USER_BADGES.INSERT_USER is '登録ユーザ';
+comment on column USER_BADGES.INSERT_DATETIME is '登録日時';
+comment on column USER_BADGES.UPDATE_USER is '更新ユーザ';
+comment on column USER_BADGES.UPDATE_DATETIME is '更新日時';
+comment on column USER_BADGES.DELETE_FLAG is '削除フラグ';
+
+comment on table ACTIVITIES is 'アクティビティ';
+comment on column ACTIVITIES.ACTIVITY_NO is 'アクティビティ番号';
+comment on column ACTIVITIES.USER_ID is 'イベントをおこしたユーザ';
+comment on column ACTIVITIES.KIND is 'アクティビティの種類';
+comment on column ACTIVITIES.TARGET is 'ターゲットID';
+comment on column ACTIVITIES.INSERT_USER is '登録ユーザ';
+comment on column ACTIVITIES.INSERT_DATETIME is '登録日時';
+comment on column ACTIVITIES.UPDATE_USER is '更新ユーザ';
+comment on column ACTIVITIES.UPDATE_DATETIME is '更新日時';
+comment on column ACTIVITIES.DELETE_FLAG is '削除フラグ';
+
+comment on table BADGES is '称号';
+comment on column BADGES.NO is '番号';
+comment on column BADGES.NAME is '名称';
+comment on column BADGES.DISPLAY_TEXT is '表示名';
+comment on column BADGES.DESCRIPTION is '説明';
+comment on column BADGES.IMAGE is '画像';
+comment on column BADGES.POINT is '獲得ポイント';
+comment on column BADGES.INSERT_USER is '登録ユーザ';
+comment on column BADGES.INSERT_DATETIME is '登録日時';
+comment on column BADGES.UPDATE_USER is '更新ユーザ';
+comment on column BADGES.UPDATE_DATETIME is '更新日時';
+comment on column BADGES.DELETE_FLAG is '削除フラグ';
+
+comment on table LIKE_COMMENTS is 'コメントのイイネ';
+comment on column LIKE_COMMENTS.NO is 'NO';
+comment on column LIKE_COMMENTS.COMMENT_NO is 'コメント番号';
+comment on column LIKE_COMMENTS.LIKE_CLASS is '種類';
+comment on column LIKE_COMMENTS.INSERT_USER is '登録ユーザ';
+comment on column LIKE_COMMENTS.INSERT_DATETIME is '登録日時';
+comment on column LIKE_COMMENTS.UPDATE_USER is '更新ユーザ';
+comment on column LIKE_COMMENTS.UPDATE_DATETIME is '更新日時';
+comment on column LIKE_COMMENTS.DELETE_FLAG is '削除フラグ';
+
+comment on table TOKENS is '認証トークン';
+comment on column TOKENS.TOKEN is 'TOKEN';
+comment on column TOKENS.USER_ID is 'ユーザID';
+comment on column TOKENS.EXPIRES is '有効期限';
+comment on column TOKENS.INSERT_USER is '登録ユーザ';
+comment on column TOKENS.INSERT_DATETIME is '登録日時';
+comment on column TOKENS.UPDATE_USER is '更新ユーザ';
+comment on column TOKENS.UPDATE_DATETIME is '更新日時';
+comment on column TOKENS.DELETE_FLAG is '削除フラグ';
+
+comment on table MAIL_PROPERTIES is 'メール受信設定';
+comment on column MAIL_PROPERTIES.HOOK_ID is 'HOOK_ID';
+comment on column MAIL_PROPERTIES.PROPERTY_KEY is 'PROPERTY_KEY';
+comment on column MAIL_PROPERTIES.PROPERTY_VALUE is 'PROPERTY_VALUE';
+comment on column MAIL_PROPERTIES.INSERT_USER is '登録ユーザ';
+comment on column MAIL_PROPERTIES.INSERT_DATETIME is '登録日時';
+comment on column MAIL_PROPERTIES.UPDATE_USER is '更新ユーザ';
+comment on column MAIL_PROPERTIES.UPDATE_DATETIME is '更新日時';
+comment on column MAIL_PROPERTIES.DELETE_FLAG is '削除フラグ';
 
 comment on table MAIL_LOCALE_TEMPLATES is 'ロケール毎のメールテンプレート';
 comment on column MAIL_LOCALE_TEMPLATES.TEMPLATE_ID is 'テンプレートID';
@@ -777,7 +1086,7 @@ comment on column SURVEYS.DELETE_FLAG is '削除フラグ';
 
 comment on table EVENTS is 'イベント';
 comment on column EVENTS.KNOWLEDGE_ID is 'ナレッジID';
-comment on column EVENTS.START_DATE_TIME is '開催日     UTC';
+comment on column EVENTS.START_DATE_TIME is '開催日	 UTC';
 comment on column EVENTS.TIME_ZONE is 'タイムゾーン';
 comment on column EVENTS.NOTIFY_STATUS is '通知ステータス';
 comment on column EVENTS.INSERT_USER is '登録ユーザ';
@@ -842,6 +1151,8 @@ comment on table WEBHOOK_CONFIGS is 'Webhook 設定';
 comment on column WEBHOOK_CONFIGS.HOOK_ID is 'HOOK ID';
 comment on column WEBHOOK_CONFIGS.HOOK is 'HOOK';
 comment on column WEBHOOK_CONFIGS.URL is 'URL';
+comment on column WEBHOOK_CONFIGS.IGNORE_PROXY is 'IGNORE_PROXY';
+comment on column WEBHOOK_CONFIGS.TEMPLATE is 'TEMPLATE';
 comment on column WEBHOOK_CONFIGS.INSERT_USER is '登録ユーザ';
 comment on column WEBHOOK_CONFIGS.INSERT_DATETIME is '登録日時';
 comment on column WEBHOOK_CONFIGS.UPDATE_USER is '更新ユーザ';
@@ -878,7 +1189,7 @@ comment on column DRAFT_KNOWLEDGES.DELETE_FLAG is '削除フラグ';
 
 comment on table MAIL_POSTS is 'メールから投稿';
 comment on column MAIL_POSTS.MESSAGE_ID is 'Message-ID';
-comment on column MAIL_POSTS.POST_KIND is '投稿区分  1: Knowledge 2:Comment';
+comment on column MAIL_POSTS.POST_KIND is '投稿区分	 1: Knowledge 2:Comment';
 comment on column MAIL_POSTS.ID is 'ID';
 comment on column MAIL_POSTS.SENDER is 'SENDER';
 comment on column MAIL_POSTS.INSERT_USER is '登録ユーザ';
@@ -890,10 +1201,10 @@ comment on column MAIL_POSTS.DELETE_FLAG is '削除フラグ';
 comment on table MAIL_HOOK_CONDITIONS is 'メールから投稿する条件';
 comment on column MAIL_HOOK_CONDITIONS.HOOK_ID is 'HOOK_ID';
 comment on column MAIL_HOOK_CONDITIONS.CONDITION_NO is 'CONDITION_NO';
-comment on column MAIL_HOOK_CONDITIONS.CONDITION_KIND is '条件の種類  1:宛先が「条件文字」であった場合';
+comment on column MAIL_HOOK_CONDITIONS.CONDITION_KIND is '条件の種類	 1:宛先が「条件文字」であった場合';
 comment on column MAIL_HOOK_CONDITIONS.CONDITION is '条件の文字';
 comment on column MAIL_HOOK_CONDITIONS.PROCESS_USER is '投稿者';
-comment on column MAIL_HOOK_CONDITIONS.PROCESS_USER_KIND is '投稿者の指定  1:送信者のメールアドレスから、2:常に固定';
+comment on column MAIL_HOOK_CONDITIONS.PROCESS_USER_KIND is '投稿者の指定	 1:送信者のメールアドレスから、2:常に固定';
 comment on column MAIL_HOOK_CONDITIONS.PUBLIC_FLAG is '公開区分';
 comment on column MAIL_HOOK_CONDITIONS.TAGS is 'タグ';
 comment on column MAIL_HOOK_CONDITIONS.VIEWERS is '公開先';
@@ -961,6 +1272,7 @@ comment on column TEMPLATE_MASTERS.TYPE_ID is 'テンプレートの種類ID';
 comment on column TEMPLATE_MASTERS.TYPE_NAME is 'テンプレート名';
 comment on column TEMPLATE_MASTERS.TYPE_ICON is 'アイコン';
 comment on column TEMPLATE_MASTERS.DESCRIPTION is '説明';
+comment on column TEMPLATE_MASTERS.INITIAL_VALUE is '本文の初期値';
 comment on column TEMPLATE_MASTERS.INSERT_USER is '登録ユーザ';
 comment on column TEMPLATE_MASTERS.INSERT_DATETIME is '登録日時';
 comment on column TEMPLATE_MASTERS.UPDATE_USER is '更新ユーザ';
@@ -973,6 +1285,7 @@ comment on column TEMPLATE_ITEMS.ITEM_NO is '項目NO';
 comment on column TEMPLATE_ITEMS.ITEM_NAME is '項目名';
 comment on column TEMPLATE_ITEMS.ITEM_TYPE is '項目の種類';
 comment on column TEMPLATE_ITEMS.DESCRIPTION is '説明';
+comment on column TEMPLATE_ITEMS.INITIAL_VALUE is '初期値';
 comment on column TEMPLATE_ITEMS.INSERT_USER is '登録ユーザ';
 comment on column TEMPLATE_ITEMS.INSERT_DATETIME is '登録日時';
 comment on column TEMPLATE_ITEMS.UPDATE_USER is '更新ユーザ';
@@ -1058,6 +1371,7 @@ comment on column ACCOUNT_IMAGES.DELETE_FLAG is '削除フラグ';
 comment on table LIKES is 'いいね';
 comment on column LIKES.NO is 'NO';
 comment on column LIKES.KNOWLEDGE_ID is 'ナレッジID';
+comment on column LIKES.LIKE_CLASS is '種類';
 comment on column LIKES.INSERT_USER is '登録ユーザ';
 comment on column LIKES.INSERT_DATETIME is '登録日時';
 comment on column LIKES.UPDATE_USER is '更新ユーザ';
@@ -1165,8 +1479,10 @@ comment on column KNOWLEDGES.TAG_IDS is 'タグID一覧';
 comment on column KNOWLEDGES.TAG_NAMES is 'タグ名称一覧';
 comment on column KNOWLEDGES.LIKE_COUNT is 'いいね件数';
 comment on column KNOWLEDGES.COMMENT_COUNT is 'コメント件数';
+comment on column KNOWLEDGES.VIEW_COUNT is '参照件数';
 comment on column KNOWLEDGES.TYPE_ID is 'テンプレートの種類ID';
 comment on column KNOWLEDGES.NOTIFY_STATUS is '通知ステータス';
+comment on column KNOWLEDGES.POINT is 'ポイント';
 comment on column KNOWLEDGES.INSERT_USER is '登録ユーザ';
 comment on column KNOWLEDGES.INSERT_DATETIME is '登録日時';
 comment on column KNOWLEDGES.UPDATE_USER is '更新ユーザ';

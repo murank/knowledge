@@ -16,18 +16,18 @@
 
 <c:param name="PARAM_HEAD">
 <!-- build:css(src/main/webapp) css/page-knowledge-search.css -->
-<link rel="stylesheet" href="bower/bootstrap-tagsinput/dist/bootstrap-tagsinput.css" />
-<link rel="stylesheet" href="css/knowledge-edit.css" />
+<link rel="stylesheet" href="<%= request.getContextPath() %>/bower/bootstrap-tagsinput/dist/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/knowledge-edit.css" />
 <!-- endbuild -->
 </c:param>
 
 <c:param name="PARAM_SCRIPTS">
 <!-- build:js(src/main/webapp) js/page-knowledge-search.js -->
-<script type="text/javascript" src="bower/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js"></script>
-<script type="text/javascript" src="bower/bootstrap3-typeahead/bootstrap3-typeahead.min.js"></script>
-<script type="text/javascript" src="js/tagselect.js"></script>
-<script type="text/javascript" src="js/groupselect.js"></script>
-<script type="text/javascript" src="js/search.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/bower/bootstrap-tagsinput/dist/bootstrap-tagsinput.min.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/bower/bootstrap3-typeahead/bootstrap3-typeahead.min.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/tagselect.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/groupselect.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/search.js"></script>
 <!-- endbuild -->
 
 <script>
@@ -54,7 +54,6 @@ _GROUPS.push(groupname);
     
     <form role="form" action="<%=request.getContextPath()%><%=top%>">
     
-
         <div class="form-group">
             <label for="input_tag">
             <%= jspUtil.label("knowledge.search.keyword") %>
@@ -66,9 +65,9 @@ _GROUPS.push(groupname);
             <label for="input_tag">
             <%= jspUtil.label("knowledge.add.label.type") %>
             </label><br/>
-            <input type="radio" name="template" value="" checked="checked">ALL &nbsp;
+            <!-- <input type="checkbox" name="" value="all" checked="checked">ALL &nbsp; -->
             <c:forEach var="template" items="${templates}" varStatus="status">
-                <label><input type="radio" name="template" value="<%= jspUtil.out("template.typeId") %>">
+                <label><input type="checkbox" name="template" value="<%= jspUtil.out("template.typeId") %>" checked>
                 <i class="fa <%= jspUtil.out("template.typeIcon") %>"></i>
                 <%= jspUtil.out("template.typeName") %>&nbsp;
                 </label>
@@ -86,6 +85,20 @@ _GROUPS.push(groupname);
                 placeholder="<%= jspUtil.label("knowledge.add.label.tags") %>" value="<%= jspUtil.out("tagNames") %>" />
             </p>
         </div>
+        
+        <div class="form-group">
+            <label for="input_tag">
+            <%= jspUtil.label("knowledge.search.creator") %>
+            <span class="helpMarkdownLabel">
+            <a data-toggle="modal" data-target="#searchUserModal"><%= jspUtil.label("knowledge.search.creator") %></a>
+            </span>
+            </label>
+            <p class="creators">
+            <input type="text" class="form-control" name="creators" id="creators" data-role="tags input"
+                placeholder="<%= jspUtil.label("knowledge.search.creator") %>" value="<%= jspUtil.out("creators") %>" />
+            </p>
+        </div>
+        
         <% if (jspUtil.logined()) { %>
         <div class="form-group">
             <label for="input_group">
@@ -113,6 +126,7 @@ _GROUPS.push(groupname);
 
     <jsp:include page="../tag/dialog.jsp"></jsp:include>
     <jsp:include page="../../protect/group/dialog.jsp"></jsp:include>
+    <jsp:include page="partials/selectUserDialog.jsp"></jsp:include>
 
 </c:param>
 

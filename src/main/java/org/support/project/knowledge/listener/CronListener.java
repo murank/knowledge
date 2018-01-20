@@ -20,7 +20,6 @@ import org.support.project.knowledge.bat.MailSendBat;
 import org.support.project.knowledge.bat.NotifyMailBat;
 import org.support.project.knowledge.bat.WebhookBat;
 import org.support.project.knowledge.config.AppConfig;
-import org.support.project.knowledge.config.SystemConfig;
 
 public class CronListener implements ServletContextListener {
 
@@ -39,12 +38,17 @@ public class CronListener implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent sce) {
         String logsPath = AppConfig.get().getLogsPath();
         File logDir = new File(logsPath);
-        String envValue = System.getenv(SystemConfig.KNOWLEDGE_ENV_KEY);
+        AppConfig.get();
+        String envValue = System.getenv(AppConfig.getEnvKey());
 
         service = new ScheduledThreadPoolExecutor(1);
         fileClearfuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [fileClearfuture]");
                 // Java を別のVMで実行（添付ファイルの定期的なクリア）
                 JavaJob job = new JavaJob();
@@ -54,7 +58,7 @@ public class CronListener implements ServletContextListener {
                 job.setMainClass(KnowledgeFileClearBat.class.getName());
                 job.setXmx(256);
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();
@@ -73,6 +77,10 @@ public class CronListener implements ServletContextListener {
         parsefuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [parsefuture]");
                 // 添付ファイルの中身を抽出し検索可能にする
                 JavaJob job = new JavaJob();
@@ -82,7 +90,7 @@ public class CronListener implements ServletContextListener {
                 job.setMainClass(FileParseBat.class.getName());
                 job.setXmx(1024);
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();
@@ -101,6 +109,10 @@ public class CronListener implements ServletContextListener {
         mailfuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [mailfuture]");
                 // メール送信
                 JavaJob job = new JavaJob();
@@ -110,7 +122,7 @@ public class CronListener implements ServletContextListener {
                 job.setMainClass(MailSendBat.class.getName());
                 job.setXmx(256);
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();
@@ -129,6 +141,10 @@ public class CronListener implements ServletContextListener {
         webhookfuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [webhookfuture]");
                 // Webhook
                 JavaJob job = new JavaJob();
@@ -138,7 +154,7 @@ public class CronListener implements ServletContextListener {
                 job.setMainClass(WebhookBat.class.getName());
                 job.setXmx(256);
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();
@@ -157,6 +173,10 @@ public class CronListener implements ServletContextListener {
         mailHookfuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [mailHookfuture]");
                 // メールからの投稿用のメールの読み込み
                 JavaJob job = new JavaJob();
@@ -166,7 +186,7 @@ public class CronListener implements ServletContextListener {
                 job.setMainClass(MailReadBat.class.getName());
                 job.setXmx(256);
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();
@@ -185,6 +205,10 @@ public class CronListener implements ServletContextListener {
         notifyfuture = service.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (AppConfig.get().isMaintenanceMode()) {
+                    LOG.debug("This service is maintenance mode now.");
+                    return;
+                }
                 LOG.trace("called. [notifyfuture]");
                 // Java を別のVMで実行（添付ファイルの中身を抽出し検索可能にする）
                 JavaJob job = new JavaJob();
@@ -193,7 +217,7 @@ public class CronListener implements ServletContextListener {
                 job.addClassPathDir(new File(sce.getServletContext().getRealPath("/WEB-INF/classes")));
                 job.setMainClass(NotifyMailBat.class.getName());
                 if (StringUtils.isNotEmpty(envValue)) {
-                    job.addEnvironment(SystemConfig.KNOWLEDGE_ENV_KEY, envValue);
+                    job.addEnvironment(AppConfig.getEnvKey(), envValue);
                 }
                 try {
                     JobResult result = job.execute();

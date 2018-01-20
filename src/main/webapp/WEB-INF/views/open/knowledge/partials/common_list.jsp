@@ -1,3 +1,4 @@
+<%@page import="org.support.project.knowledge.logic.TemplateLogic"%>
 <%@page import="org.support.project.knowledge.logic.EventsLogic"%>
 <%@page pageEncoding="UTF-8" isELIgnored="false" session="false" errorPage="/WEB-INF/views/commons/errors/jsp_error.jsp"%>
 <%@page import="java.util.Map"%>
@@ -30,8 +31,19 @@
     </c:if>
 
     <c:forEach var="knowledge" items="${list_data}" varStatus="status">
-        <% KnowledgesEntity knowledge = (KnowledgesEntity) pageContext.getAttribute("knowledge"); %>
-        <div class="knowledge_item">
+        <% KnowledgesEntity knowledge = (KnowledgesEntity) pageContext.getAttribute("knowledge");
+        StockKnowledge stock = null;
+        String unread = "";
+        String unreadLabel = "";
+        if (knowledge instanceof StockKnowledge) { 
+            stock = (StockKnowledge) knowledge;
+            if (!stock.isViewed()) {
+                unread = "unread";
+                unreadLabel = "[" + jspUtil.label("label.unread") + "]";
+            }
+        }
+        %>
+        <div class="knowledge_item <%= unread %>">
             <div class="insert_info">
                 <a href="<%=request.getContextPath()%>/open.knowledge/view/<%=jspUtil.out("knowledge.knowledgeId")%><%=jspUtil.out("params")%>"
                     class="text-primary btn-link">
@@ -43,6 +55,7 @@
                     </div>
                 </a>
                 <div>
+                    <%= unreadLabel %>
                     <img src="<%=request.getContextPath()%>/images/loader.gif"
                         data-echo="<%=request.getContextPath()%>/open.account/icon/<%=jspUtil.out("knowledge.insertUser")%>" alt="icon"
                         width="20" height="20" />
@@ -68,11 +81,8 @@
                  <div>
                      <i class="fa fa-calendar"></i>&nbsp;
                      <%= jspUtil.label("knowledge.list.event.datetime") %>: <%= knowledge.getLocalStartDateTime(jspUtil.locale(), timezone) %>
-                     
                      <%
-                     if (knowledge instanceof StockKnowledge) { 
-                         StockKnowledge stock = (StockKnowledge) knowledge;
-                         if (stock.getParticipations() != null) {
+                         if (stock != null && stock.getParticipations() != null) {
                      %>
                      <i class="fa fa-users"></i>&nbsp;<%= stock.getParticipations().getCount() %> /  <%= stock.getParticipations().getLimit() %>
                      <% if (stock.getParticipations().getStatus() != null) { %>
@@ -84,22 +94,32 @@
                          <% } %>
                      </span>
                      <% } %>
-                     <% } } %>
+                     <% } %>
                  </div>
                  <% } %>
             </div>
         
             <div class="item-info">
+                <i class="fa fa-heart-o" style="margin-left: 5px;"></i>&nbsp;× <%=jspUtil.out("knowledge.point")%> &nbsp;
+                <% if (knowledge.getPointOnTerm() != null && knowledge.getPointOnTerm().intValue() > 0) {  %>
+                (<i class="fa fa-line-chart" aria-hidden="true"></i>&nbsp;× <%=jspUtil.out("knowledge.pointOnTerm")%>) &nbsp;
+                <% } %>
                 <a class="text-primary btn-link"
                     href="<%=request.getContextPath()%>/open.knowledge/likes/<%=jspUtil.out("knowledge.knowledgeId")%><%=jspUtil.out("params")%>">
-                    <i class="fa fa-thumbs-o-up" style="margin-left: 5px;"></i>&nbsp;× <span id="like_count"><%=jspUtil.out("knowledge.likeCount")%></span>
+                    <i class="fa fa-thumbs-o-up"></i>&nbsp;× <span id="like_count"><%=jspUtil.out("knowledge.likeCount")%></span>
                 </a> &nbsp;
                 <a class="text-primary btn-link"
                     href="<%=request.getContextPath()%>/open.knowledge/view/<%=jspUtil.out("knowledge.knowledgeId")%><%=jspUtil.out("params")%>#comments">
                     <i class="fa fa-comments-o"></i>&nbsp;× <%=jspUtil.out("knowledge.commentCount")%>
                 </a> &nbsp;
-                <i class="fa <%= templates.get(knowledge.getTypeId()).getTypeIcon() %>"></i>
-                <%= templates.get(knowledge.getTypeId()).getTypeName() %>
+                <% 
+                TemplateMastersEntity template = templates.get(knowledge.getTypeId());
+                if (template == null) {
+                    template = templates.get(TemplateLogic.TYPE_ID_KNOWLEDGE);
+                }
+                %>
+                <i class="fa <%= template.getTypeIcon() %>"></i>
+                <%= template.getTypeName() %>
                 &nbsp;
                 <%=jspUtil.is(String.valueOf(KnowledgeLogic.PUBLIC_FLAG_PUBLIC), "knowledge.publicFlag", jspUtil.label("label.public.view"))%>
                 <%=jspUtil.is(String.valueOf(KnowledgeLogic.PUBLIC_FLAG_PRIVATE), "knowledge.publicFlag", jspUtil.label("label.private.view"))%>

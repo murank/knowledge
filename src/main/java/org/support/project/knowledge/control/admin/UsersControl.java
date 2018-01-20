@@ -6,10 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.support.project.common.bean.ValidateError;
+import org.support.project.common.config.INT_FLAG;
 import org.support.project.common.util.PropertyUtil;
 import org.support.project.common.util.StringUtils;
 import org.support.project.di.DI;
 import org.support.project.di.Instance;
+import org.support.project.knowledge.config.AppConfig;
+import org.support.project.knowledge.config.SystemConfig;
+import org.support.project.knowledge.config.UserConfig;
 import org.support.project.knowledge.control.Control;
 import org.support.project.knowledge.logic.MailLogic;
 import org.support.project.knowledge.logic.UserLogicEx;
@@ -22,9 +26,13 @@ import org.support.project.web.control.service.Get;
 import org.support.project.web.control.service.Post;
 import org.support.project.web.dao.ProvisionalRegistrationsDao;
 import org.support.project.web.dao.RolesDao;
+import org.support.project.web.dao.SystemConfigsDao;
+import org.support.project.web.dao.UserConfigsDao;
 import org.support.project.web.dao.UsersDao;
 import org.support.project.web.entity.ProvisionalRegistrationsEntity;
 import org.support.project.web.entity.RolesEntity;
+import org.support.project.web.entity.SystemConfigsEntity;
+import org.support.project.web.entity.UserConfigsEntity;
 import org.support.project.web.entity.UsersEntity;
 import org.support.project.web.exception.InvalidParamException;
 
@@ -165,8 +173,20 @@ public class UsersControl extends Control {
 
         // 登録されているロールをセット
         setSystemRoles(user);
+        
+        // 保存されているユーザの設定情報をセット
+        setUserConfigs(user);
 
         return forward("view_edit.jsp");
+    }
+
+    private void setUserConfigs(UsersEntity user) {
+        UserConfigsEntity stealth = UserConfigsDao.get().selectOnKey(UserConfig.STEALTH_ACCESS, AppConfig.get().getSystemName(), user.getUserId());
+        if (stealth != null) {
+            setAttribute(UserConfig.STEALTH_ACCESS, stealth.getConfigValue());
+        } else {
+            setAttribute(UserConfig.STEALTH_ACCESS, String.valueOf(INT_FLAG.OFF.getValue()));
+        }
     }
 
     /**
@@ -209,6 +229,18 @@ public class UsersControl extends Control {
         user = UserLogicEx.get().insert(user, roles);
         setAttributeOnProperty(user);
 
+        String stealth = getParam("STEALTH_ACCESS");
+        if ("1".equals(stealth)) {
+            UserConfigsEntity config = new UserConfigsEntity(UserConfig.STEALTH_ACCESS, AppConfig.get().getSystemName(), user.getUserId());
+            config.setConfigValue("1");
+            UserConfigsDao.get().save(config);
+        } else {
+            UserConfigsEntity config = UserConfigsDao.get().selectOnKey(UserConfig.STEALTH_ACCESS, AppConfig.get().getSystemName(), user.getUserId());
+            if (stealth != null && config != null) {
+                UserConfigsDao.get().physicalDelete(config);
+            }
+        }
+        
         // 登録されているロールをセット
         setSystemRoles(user);
 
@@ -276,6 +308,18 @@ public class UsersControl extends Control {
         user = UserLogicEx.get().update(user, roles, getLoginedUser());
         setAttributeOnProperty(user);
 
+        String stealth = getParam("STEALTH_ACCESS");
+        if ("1".equals(stealth)) {
+            UserConfigsEntity config = new UserConfigsEntity(UserConfig.STEALTH_ACCESS, AppConfig.get().getSystemName(), user.getUserId());
+            config.setConfigValue("1");
+            UserConfigsDao.get().save(config);
+        } else {
+            UserConfigsEntity config = UserConfigsDao.get().selectOnKey(UserConfig.STEALTH_ACCESS, AppConfig.get().getSystemName(), user.getUserId());
+            if (stealth != null && config != null) {
+                UserConfigsDao.get().physicalDelete(config);
+            }
+        }
+        
         // 登録されているロールをセット
         setSystemRoles(user);
 
@@ -355,8 +399,14 @@ public class UsersControl extends Control {
             addMsgSuccess("message.success.accept");
 
             // 承認されたことを通知
+            SystemConfigsEntity config = SystemConfigsDao.get().selectOnKey(SystemConfig.SYSTEM_URL, AppConfig.get().getSystemName());
+            String url;
+            if (config == null) {
+                url = HttpUtil.getContextUrl(getRequest());
+            } else {
+                url = config.getConfigValue();
+            }
             MailLogic mailLogic = MailLogic.get();
-            String url = HttpUtil.getContextUrl(getRequest());
             mailLogic.sendAcceptedAddRequest(entity, url);
         } else {
             // 他の管理者がすでに承認していました

@@ -3,7 +3,6 @@ package org.support.project.knowledge.logic;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +10,7 @@ import java.util.Map;
 import org.support.project.aop.Aspect;
 import org.support.project.common.log.Log;
 import org.support.project.common.log.LogFactory;
+import org.support.project.common.util.DateUtils;
 import org.support.project.common.util.HtmlUtils;
 import org.support.project.common.util.PropertyUtil;
 import org.support.project.common.util.StringJoinBuilder;
@@ -20,6 +20,7 @@ import org.support.project.di.DI;
 import org.support.project.di.Instance;
 import org.support.project.knowledge.bat.FileParseBat;
 import org.support.project.knowledge.config.IndexType;
+import org.support.project.knowledge.config.SystemConfig;
 import org.support.project.knowledge.dao.CommentsDao;
 import org.support.project.knowledge.dao.DraftItemValuesDao;
 import org.support.project.knowledge.dao.DraftKnowledgesDao;
@@ -51,13 +52,14 @@ import org.support.project.knowledge.entity.KnowledgeItemValuesEntity;
 import org.support.project.knowledge.entity.KnowledgeTagsEntity;
 import org.support.project.knowledge.entity.KnowledgeUsersEntity;
 import org.support.project.knowledge.entity.KnowledgesEntity;
-import org.support.project.knowledge.entity.LikesEntity;
 import org.support.project.knowledge.entity.StocksEntity;
 import org.support.project.knowledge.entity.TagsEntity;
 import org.support.project.knowledge.entity.TemplateItemsEntity;
 import org.support.project.knowledge.entity.TemplateMastersEntity;
 import org.support.project.knowledge.entity.ViewHistoriesEntity;
 import org.support.project.knowledge.indexer.IndexingValue;
+import org.support.project.knowledge.logic.activity.Activity;
+import org.support.project.knowledge.logic.activity.ActivityLogic;
 import org.support.project.knowledge.logic.hook.AfterSaveHook;
 import org.support.project.knowledge.logic.hook.BeforeSaveHook;
 import org.support.project.knowledge.logic.hook.HookFactory;
@@ -68,6 +70,7 @@ import org.support.project.knowledge.vo.StockKnowledge;
 import org.support.project.web.bean.LabelValue;
 import org.support.project.web.bean.LoginedUser;
 import org.support.project.web.entity.GroupsEntity;
+import org.support.project.web.entity.UsersEntity;
 import org.support.project.web.exception.AuthenticateException;
 
 /**
@@ -217,6 +220,10 @@ public class KnowledgeLogic {
         for (AfterSaveHook afterSaveHook : afterSaveHooks) {
             afterSaveHook.afterSave(data, loginedUser);
         }
+        
+        // CPの処理
+        ActivityLogic.get().processKnowledgeSaveActivity(loginedUser, DateUtils.now(), insertedEntity);
+        
         return insertedEntity;
     }
 
@@ -239,6 +246,7 @@ public class KnowledgeLogic {
 
         // ナレッッジを更新
         data.getKnowledge().setNotifyStatus(db.getNotifyStatus()); // 通知フラグはDBの値を引き継ぐ
+        data.getKnowledge().setPoint(db.getPoint()); // ポイントもDBの値を引き継ぐ
         KnowledgesEntity updatedEntity = knowledgesDao.update(data.getKnowledge());
         // ユーザのアクセス権を解除
         knowledgeUsersDao.deleteOnKnowledgeId(updatedEntity.getKnowledgeId());
@@ -272,14 +280,21 @@ public class KnowledgeLogic {
         if (data.isUpdateContent()) {
             // 履歴登録
             insertHistory(updatedEntity);
-            // 通知
-            NotifyLogic.get().notifyOnKnowledgeUpdate(updatedEntity);
         } else {
             // 更新ユーザ＆更新日付を戻す
             updatedEntity.setUpdateUser(db.getUpdateUser());
             updatedEntity.setUpdateDatetime(db.getUpdateDatetime());
             knowledgesDao.physicalUpdate(updatedEntity);
         }
+        if (data.isNotifyUpdate()) {
+            // 通知
+            NotifyLogic.get().notifyOnKnowledgeUpdate(updatedEntity);
+        }
+        if (data.isDonotUpdateTimeline()) {
+            // タイムラインの上に表示しないと明示的に指定があれば、全文検索エンジン上の更新日は更新しない（検索エンジンのインデックスでタイムラインを作っているため）
+            updatedEntity.setUpdateDatetime(db.getUpdateDatetime());
+        }
+        
         // 全文検索エンジンへ登録
         saveIndex(updatedEntity, data.getTags(), data.getViewers(), data.getTemplate(), updatedEntity.getInsertUser());
 
@@ -290,6 +305,10 @@ public class KnowledgeLogic {
         for (AfterSaveHook afterSaveHook : afterSaveHooks) {
             afterSaveHook.afterSave(data, loginedUser);
         }
+        
+        // CP
+        ActivityLogic.get().processKnowledgeSaveActivity(loginedUser, DateUtils.now(), updatedEntity);
+        
         return updatedEntity;
     }
 
@@ -510,13 +529,15 @@ public class KnowledgeLogic {
      * @param keyword
      * @param tags
      * @param groups
+     * @param creators 
      * @param loginedUser
      * @param offset
      * @param limit
      * @return
      * @throws Exception
      */
-    public List<KnowledgesEntity> searchKnowledge(String keyword, List<TagsEntity> tags, List<GroupsEntity> groups, String template, LoginedUser loginedUser,
+    public List<KnowledgesEntity> searchKnowledge(String keyword, List<TagsEntity> tags, List<GroupsEntity> groups, 
+            List<UsersEntity> creators, String[] templates, LoginedUser loginedUser,
             Integer offset, Integer limit) throws Exception {
         SearchingValue searchingValue = new SearchingValue();
         searchingValue.setKeyword(keyword);
@@ -530,9 +551,20 @@ public class KnowledgeLogic {
             }
         }
         // テンプレート指定もユーザに関係なく条件追加
-        if (StringUtils.isNotEmpty(template) && StringUtils.isInteger(template)) {
-            searchingValue.setTemplate(new Integer(template));
+        if (templates != null) {
+            for (String template: templates) {
+                if (StringUtils.isNotEmpty(template) && StringUtils.isInteger(template)) {
+                    searchingValue.addTemplate(new Integer(template));
+                }
+            }
         }
+        
+        if (creators != null) {
+            for (UsersEntity creator : creators) {
+                searchingValue.addCreator(creator.getUserId());
+            }
+        }
+        
         // ログインしてない場合はグループ検索ができないので公開記事のみを対象にして検索する
         if (loginedUser == null) {
             searchingValue.addUser(ALL_USER);
@@ -589,7 +621,7 @@ public class KnowledgeLogic {
      * @throws Exception
      */
     public List<KnowledgesEntity> searchKnowledge(String keyword, LoginedUser loginedUser, Integer offset, Integer limit) throws Exception {
-        return searchKnowledge(keyword, null, null, null, loginedUser, offset, limit);
+        return searchKnowledge(keyword, null, null, null, null, loginedUser, offset, limit);
     }
 
     /**
@@ -672,11 +704,10 @@ public class KnowledgeLogic {
 
     /**
      * 指定ユーザのナレッジを取得
-     * 
-     * @param userId
+     * @param targetUser
      * @param loginedUser
-     * @param i
-     * @param pageLimit
+     * @param offset
+     * @param limit
      * @return
      * @throws Exception
      */
@@ -702,7 +733,7 @@ public class KnowledgeLogic {
                 }
             }
         }
-        searchingValue.setCreator(targetUser);
+        searchingValue.addCreator(targetUser);
 
         return searchKnowledge(searchingValue);
     }
@@ -1078,38 +1109,28 @@ public class KnowledgeLogic {
      * @param knowledgeId
      * @param loginedUser
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public void addViewHistory(Long knowledgeId, LoginedUser loginedUser) {
         ViewHistoriesDao historiesDao = ViewHistoriesDao.get();
         ViewHistoriesEntity historiesEntity = new ViewHistoriesEntity();
         historiesEntity.setKnowledgeId(knowledgeId);
-        historiesEntity.setViewDateTime(new Timestamp(new Date().getTime()));
+        historiesEntity.setViewDateTime(new Timestamp(DateUtils.now().getTime()));
         if (loginedUser != null) {
             historiesEntity.setInsertUser(loginedUser.getUserId());
+        } else {
+            historiesEntity.setInsertUser(SystemConfig.SYSTEM_USER_ID);
         }
         historiesDao.insert(historiesEntity);
-    }
-
-    /**
-     * いいね！を追加
-     * 
-     * @param knowledgeId
-     * @param loginedUser
-     * @return
-     */
-    public Long addLike(Long knowledgeId, LoginedUser loginedUser) {
-        LikesDao likesDao = LikesDao.get();
-        LikesEntity likesEntity = new LikesEntity();
-        likesEntity.setKnowledgeId(knowledgeId);
-        likesDao.insert(likesEntity);
-
-        updateKnowledgeExInfo(knowledgeId);
-
-        Long count = likesDao.countOnKnowledgeId(knowledgeId);
-
-        // 通知
-        NotifyLogic.get().notifyOnKnowledgeLiked(knowledgeId, likesEntity);
-
-        return count;
+        
+        KnowledgesEntity entity = KnowledgesDao.get().selectOnKey(knowledgeId);
+        if (entity != null) {
+            Long count = entity.getViewCount();
+            if (count == null) {
+                count = new Long(0);
+            }
+            count = count + 1;
+            KnowledgesDao.get().updateViewCount(count, knowledgeId);
+        }
     }
 
     /**
@@ -1182,6 +1203,9 @@ public class KnowledgeLogic {
 
         // 通知
         NotifyLogic.get().notifyOnKnowledgeComment(knowledgeId, commentsEntity);
+        
+        //ポイント
+        ActivityLogic.get().processActivity(Activity.COMMENT_INSERT, loginedUser, DateUtils.now(), commentsEntity);
         
         return commentsEntity;
     }
@@ -1394,17 +1418,17 @@ public class KnowledgeLogic {
     }
 
     /**
-     * 一定期間で、「イイネ」の件数が多いものを一覧で取得 （イイネの件数が多い順で並べる）
+     * 一定期間で人気の高い記事を並べる
      * 
      * 
      * @param loginedUser
      * @return
      */
     public List<KnowledgesEntity> getPopularityKnowledges(LoginedUser loginedUser, int offset, int limit) {
-        long now = new Date().getTime();
+        long now = DateUtils.now().getTime();
         LOG.trace(now);
 
-        long term = 1000L * 60L * 60L * 24L * 30L;
+        long term = 1000L * 60L * 60L * 24L * 5L; // 5日間の中でCPの合計が高いものにする
         LOG.trace(term);
         long s = now - term;
         LOG.trace(s);
@@ -1559,7 +1583,29 @@ public class KnowledgeLogic {
         }
         return KnowledgesDao.get().selectAccessAbleKnowledgeOnIdPrefix(q, loginedUser, limit, offset);
     }
+    
+    /**
+     * 参照済かどうかをセットする
+     * @param stocks
+     * @param loginedUser
+     */
+    public void setViewed(List<StockKnowledge> stocks, LoginedUser loginedUser) {
+        if (stocks == null) {
+            return;
+        }
+        if (loginedUser == null) {
+            // 未ログインユーザは、未読かんりしないので、全て既読にする
+            for (StockKnowledge knowledge : stocks) {
+                knowledge.setViewed(true);
+            }
+            return;
+        }
+        List<Long> knowledgeIds = ViewHistoriesDao.get().selectViewdKnowledgeIds(stocks, loginedUser.getUserId());
+        for (StockKnowledge knowledge : stocks) {
+            if (knowledgeIds.contains(knowledge.getKnowledgeId())) {
+                knowledge.setViewed(true);
+            }
+        }
+    }
 
-    
-    
 }

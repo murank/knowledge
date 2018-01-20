@@ -36,7 +36,8 @@ public class TemplateLogic {
     public static final int TYPE_ID_KNOWLEDGE = -100;
     public static final int TYPE_ID_BOOKMARK = -99;
     public static final int TYPE_ID_EVENT = -101;
-    public static final int[] PROTECTED_TYPE_IDS = {TYPE_ID_KNOWLEDGE, TYPE_ID_BOOKMARK, TYPE_ID_EVENT};
+    public static final int TYPE_ID_PRESENTATION = -102;
+    public static final int[] PROTECTED_TYPE_IDS = {TYPE_ID_KNOWLEDGE, TYPE_ID_BOOKMARK, TYPE_ID_EVENT, TYPE_ID_PRESENTATION};
     
     public static final int ITEM_TYPE_TEXT = 0;
     public static final int ITEM_TYPE_TEXTAREA = 1;
@@ -155,6 +156,7 @@ public class TemplateLogic {
         db.setTypeName(template.getTypeName());
         db.setTypeIcon(template.getTypeIcon());
         db.setDescription(template.getDescription());
+        db.setInitialValue(template.getInitialValue());
         templateDao.update(db);
 
         Integer typeId = template.getTypeId();
@@ -333,10 +335,24 @@ public class TemplateLogic {
                 if (o2.getTypeId().intValue() == TemplateLogic.TYPE_ID_EVENT) {
                     return 1;
                 }
+                if (o1.getTypeId().intValue() == TemplateLogic.TYPE_ID_PRESENTATION) {
+                    return -1;
+                }
+                if (o2.getTypeId().intValue() == TemplateLogic.TYPE_ID_PRESENTATION) {
+                    return 1;
+                }
                 return o1.getTypeId().compareTo(o2.getTypeId());
             }
         });
         return templates;
+    }
+
+    public TemplateMastersEntity selectOnName(String template) {
+        TemplateMastersEntity entity = TemplateMastersDao.get().selectOnName(template);
+        if (entity == null) {
+            return null;
+        }
+        return loadTemplate(entity.getTypeId());
     }
 
 }

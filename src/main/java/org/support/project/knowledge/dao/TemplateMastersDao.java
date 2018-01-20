@@ -37,6 +37,7 @@ public class TemplateMastersDao extends GenTemplateMastersDao {
     /**
      * IDを採番 ※コミットしなくても次のIDを採番する為、保存しなければ欠番になる
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public Integer getNextId() {
         String sql = "SELECT MAX(TYPE_ID) FROM TEMPLATE_MASTERS;";
         Integer integer = executeQuerySingle(sql, Integer.class);
@@ -52,6 +53,7 @@ public class TemplateMastersDao extends GenTemplateMastersDao {
      * 
      * @return
      */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
     public TemplateMastersEntity selectWithItems(Integer typeId) {
         TemplateMastersEntity template = selectOnKey(typeId);
         List<TemplateItemsEntity> items = TemplateItemsDao.get().selectOnTypeId(typeId);
@@ -86,5 +88,16 @@ public class TemplateMastersDao extends GenTemplateMastersDao {
         String sql = SQLManager.getInstance()
                 .getSql("/org/support/project/knowledge/dao/sql/TemplateMastersDao/TemplateMastersDao_alter_sequence.sql");
         executeUpdate(sql);
+    }
+    
+    /**
+     * テンプレート名でテンプレートを取得
+     * @param template
+     * @return
+     */
+    @Aspect(advice = org.support.project.ormapping.transaction.Transaction.class)
+    public TemplateMastersEntity selectOnName(String template) {
+        String sql = "SELECT * FROM TEMPLATE_MASTERS WHERE TYPE_NAME = ? AND DELETE_FLAG = 0";
+        return executeQuerySingle(sql, TemplateMastersEntity.class, template);
     }
 }

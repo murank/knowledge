@@ -70,7 +70,7 @@
             <li><a href="<%=request.getContextPath()%>/admin.mail/config" style="cursor: pointer;">
                 <i class="fa fa-envelope-o"></i>&nbsp;<%=jspUtil.label("knowledge.navbar.config.system.mail")%>
             </a></li>
-            <li><a href="<%=request.getContextPath()%>/admin.ldap/config" style="cursor: pointer;">
+            <li><a href="<%=request.getContextPath()%>/admin.ldap/list" style="cursor: pointer;">
                 <i class="fa fa-user-plus"></i>&nbsp;<%=jspUtil.label("knowledge.ldap.title")%>
             </a></li>
             <li><a href="<%=request.getContextPath()%>/admin.proxy/config" style="cursor: pointer;">
@@ -101,6 +101,9 @@
             </a></li>
             <li><a href="<%=request.getContextPath()%>/admin.database/reindexing" style="cursor: pointer;">
                 <i class="fa fa-refresh"></i>&nbsp;<%=jspUtil.label("knowledge.navbar.data.reindexing")%>
+            </a></li>
+            <li><a href="<%=request.getContextPath()%>/admin.aggregate/index" style="cursor: pointer;">
+                <i class="fa fa-calculator"></i>&nbsp;<%=jspUtil.label("knowledge.aggregate.title")%>
             </a></li>
             <li><a href="<%=request.getContextPath()%>/admin.database/export" style="cursor: pointer;">
                 <i class="fa fa-external-link"></i>&nbsp;<%=jspUtil.label("knowledge.navbar.data.export")%>
