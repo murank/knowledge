@@ -142,7 +142,7 @@ var decoration = function(jqObj) {
         }).then(function() {
             // issue 711 脚注記法を正しく処理
             jqObj.find('a').each(function() {
-                if ($(this).attr("href").startsWith('#fn')) {
+                if ($(this).attr("href").indexOf('#fn') === 0) {
                     var href= $(this).attr("href");
                     var target = $(href == "#" || href == "" ? 'html' : href);
                     var position = target.offset().top;
