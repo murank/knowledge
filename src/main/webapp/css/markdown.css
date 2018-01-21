@@ -416,8 +416,8 @@
     border: none;
 }
 
-.markdown p > code.hljs { display: inline; }
-.markdown li > code.hljs { display: inline; }
+.markdown code.hljs { display: inline; }
+.markdown pre > code.hljs { display: block; }
 
 .emoji-img {
     height: 20px;
